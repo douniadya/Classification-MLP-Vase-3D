@@ -1,3 +1,5 @@
+# Classe pour la classification de donnees 3D TST
+
 import numpy as np
 
 class MLP:
