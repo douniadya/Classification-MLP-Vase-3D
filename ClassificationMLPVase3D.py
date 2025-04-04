@@ -47,6 +47,21 @@ class MLP:
      a = self.sigmoid(np.dot(w, inA)+b)
 
      return a
+  
+  #-----------------------------------------
+
+  def retropropagation(self, x, yt):
+     out, A = self.forward(x)
+
+     err = (out - yt)* self.sigmoid_derive(out)
+     for l in range(len(self.W)):
+        gradW=np.dot(err,A[l].T)
+        gradB =err
+        self.W[l]=self.W[l] - self.alpha*gradW
+        self.B[l]= self.alpha* gradB
+
+        if l>0 :
+           err = np.dot(self.W[l], err)* self.sigmoid_derive(A[l])
            
 #-------------------------------------- MAIN -----------------------------------------
  
