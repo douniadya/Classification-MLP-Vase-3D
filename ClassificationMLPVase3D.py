@@ -1,6 +1,9 @@
 
 import numpy as np
 
+def printLine():
+   print("\n--------------------------------------------------")
+
 class MLP:
   def __init__(self, inputs, outputs, hidden_layers, alpha=0.01):
      self.inputs = inputs
@@ -13,7 +16,7 @@ class MLP:
      layers = [inputs] + hidden_layers + [outputs]
 
      for i in range(len(layers)-1):
-        w = np.random.randn(layers[i+1], layers[i]) * 0.1
+        w = np.random.randn(layers[i+1], layers[i]) * np.sqrt(2/(layers[i]+layers[i+1]))
         b = np.zeros((layers[i+1], 1))
         
         self.W.append(w)
@@ -62,7 +65,8 @@ class MLP:
 
         if l>0 :
            err = np.dot(self.W[l].T, err)* self.sigmoid_derive(A[l])
-           
+
+          
 #-------------------------------------- MAIN -----------------------------------------
  
 def main():
@@ -76,14 +80,14 @@ def main():
    X_data = data[:, :3]   
    y_data = data[:, 3].reshape(-1, 1)   
 
-   mlp =MLP(inputs=3,outputs=1, hidden_layers=[4], alpha=0.01)
-
+   mlp =MLP(inputs=3,outputs=1, hidden_layers=[4,3], alpha=0.01)
+    
    print("\n testing the first ",lines," samples")
 
    for i in range(lines):   
     output, _ = mlp.forward(X_data[i])
-    print("Sample ",i,": True=", y_data[i]," output= ",output.flatten())
-    
+    print("Sample ",i,": DATA=", X_data[i],": True=", y_data[i]," output= ",output.flatten())
+   
    for e in range(10000):
      for i in range(lines):
        mlp.retropropagation(X_data[i],y_data[i])
@@ -93,6 +97,34 @@ def main():
    for i in range(lines):   
       output, _ = mlp.forward(X_data[i])
       print("Sample ",i,": True=", y_data[i]," ","output= ",output.flatten())
+    
+   #---- testing on XOR----------------------------------------------------------------------------------------------------------------------------
+   printLine()
+   print("Learning on XOR:")
+   mpl=MLP(inputs=2,outputs=1, hidden_layers=[4], alpha=0.1)
+   XOR_X =np.array([[0,0],
+                    [0,1],
+                    [1,0],
+                    [1,1]])
+   
+   XOR_y=np.array([0,1,1,0]).reshape(-1,1)
+
+   for i in range(4):   
+    XORoutput, _ = mpl.forward(XOR_X[i])
+    print("Sample ",i,": True=", XOR_y[i][0]," output= ",XORoutput.flatten()[0])
+
+   for e in range(10000):
+     for i in range(4):
+       mpl.retropropagation(XOR_X[i],XOR_y[i])
+   
+   print("output after retropropagation :")
+
+   for i in range(4):   
+      output, _ = mpl.forward(XOR_X[i])
+      print("Sample ",i,": True=", XOR_y[i][0]," ","output= ",output.flatten()[0])
+
+   
+
 
 
 
