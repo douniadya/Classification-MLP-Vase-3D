@@ -54,14 +54,14 @@ class MLP:
      out, A = self.forward(x)
 
      err = (out - yt)* self.sigmoid_derive(out)
-     for l in range(len(self.W)):
+     for l in reversed(range(len(self.W))):
         gradW=np.dot(err,A[l].T)
         gradB =err
         self.W[l]=self.W[l] - self.alpha*gradW
-        self.B[l]= self.alpha* gradB
+        self.B[l]= self.B[l]- self.alpha* gradB
 
         if l>0 :
-           err = np.dot(self.W[l], err)* self.sigmoid_derive(A[l])
+           err = np.dot(self.W[l].T, err)* self.sigmoid_derive(A[l])
            
 #-------------------------------------- MAIN -----------------------------------------
  
@@ -70,19 +70,29 @@ def main():
    # Charger les données from file
 
    data_file = "data.txt"
-   lines = 5
+   lines = 10
    data = np.loadtxt(data_file)[:lines]   
 
    X_data = data[:, :3]   
    y_data = data[:, 3].reshape(-1, 1)   
 
-   mlp =MLP(inputs=3,outputs=1, hidden_layers=[4], alpha=0.1)
+   mlp =MLP(inputs=3,outputs=1, hidden_layers=[4], alpha=0.01)
 
    print("\n testing the first ",lines," samples")
 
    for i in range(lines):   
     output, _ = mlp.forward(X_data[i])
-    print("Sample ",i,": True=", y_data[i]," ","output= ",output.flatten())
+    print("Sample ",i,": True=", y_data[i]," output= ",output.flatten())
+    
+   for e in range(10000):
+     for i in range(lines):
+       mlp.retropropagation(X_data[i],y_data[i])
+   
+   print("output after retropropagation :")
+
+   for i in range(lines):   
+      output, _ = mlp.forward(X_data[i])
+      print("Sample ",i,": True=", y_data[i]," ","output= ",output.flatten())
 
 
 
