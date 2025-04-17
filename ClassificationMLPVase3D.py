@@ -16,7 +16,7 @@ class MLP:
      layers = [inputs] + hidden_layers + [outputs]
 
      for i in range(len(layers)-1):
-        w = np.random.randn(layers[i+1], layers[i]) * np.sqrt(2/(layers[i]+layers[i+1]))
+        w = np.random.randn(layers[i+1], layers[i]) * np.sqrt(2./layers[i])    #np.sqrt(2./(layers[i]+layers[i+1]))
         b = np.zeros((layers[i+1], 1))
         
         self.W.append(w)
@@ -54,19 +54,29 @@ class MLP:
   #-----------------------------------------
 
   def retropropagation(self, x, yt):
-     out, A = self.forward(x)
+     out, A = self.forward(x) 
+     yt = yt.reshape(-1,1)
+ 
+     D = [(out - yt) * self.sigmoid_derive(out)]
+     for l in reversed(range(len(self.W)-1)):
+        err = np.dot(self.W[l+1].T, D[-1])
+        D.append(err * self.sigmoid_derive(A[l+1]))
+     D.reverse()
 
-     err = (out - yt)* self.sigmoid_derive(out)
-     for l in reversed(range(len(self.W))):
-        gradW=np.dot(err,A[l].T)
-        gradB =err
-        self.W[l]=self.W[l] - self.alpha*gradW
-        self.B[l]= self.B[l]- self.alpha* gradB
+     for l in range(len(self.W)):
+        gradW=np.dot(D[l],A[l].T)
+        gradB =D[l]
+        self.W[l] -= self.alpha * gradW
+        self.B[l] -= self.alpha * gradB
+   
+  def train(self, X,y,iterations):
+     for i in range(iterations):
+       for j in range(len(X)):
+          self.retropropagation(X[j],y[j])
+ 
+   
+     
 
-        if l>0 :
-           err = np.dot(self.W[l].T, err)* self.sigmoid_derive(A[l])
-
-          
 #-------------------------------------- MAIN -----------------------------------------
  
 def main():
@@ -74,13 +84,13 @@ def main():
    # Charger les données from file
 
    data_file = "data.txt"
-   lines = 10
+   lines = 5
    data = np.loadtxt(data_file)[:lines]   
 
    X_data = data[:, :3]   
    y_data = data[:, 3].reshape(-1, 1)   
 
-   mlp =MLP(inputs=3,outputs=1, hidden_layers=[4,3], alpha=0.01)
+   mlp =MLP(inputs=3,outputs=1, hidden_layers=[5,3], alpha=0.2)
     
    print("\n testing the first ",lines," samples")
 
@@ -88,9 +98,8 @@ def main():
     output, _ = mlp.forward(X_data[i])
     print("Sample ",i,": DATA=", X_data[i],": True=", y_data[i]," output= ",output.flatten())
    
-   for e in range(10000):
-     for i in range(lines):
-       mlp.retropropagation(X_data[i],y_data[i])
+    
+   mlp.train(X_data,y_data,10000)
    
    print("output after retropropagation :")
 
@@ -101,7 +110,7 @@ def main():
    #---- testing on XOR----------------------------------------------------------------------------------------------------------------------------
    printLine()
    print("Learning on XOR:")
-   mpl=MLP(inputs=2,outputs=1, hidden_layers=[4], alpha=0.1)
+   mpl=MLP(inputs=2,outputs=1, hidden_layers=[5,3], alpha=0.6)
    XOR_X =np.array([[0,0],
                     [0,1],
                     [1,0],
@@ -113,9 +122,9 @@ def main():
     XORoutput, _ = mpl.forward(XOR_X[i])
     print("Sample ",i,": True=", XOR_y[i][0]," output= ",XORoutput.flatten()[0])
 
-   for e in range(10000):
-     for i in range(4):
-       mpl.retropropagation(XOR_X[i],XOR_y[i])
+   
+   mpl.train(XOR_X,XOR_y,20000)
+       
    
    print("output after retropropagation :")
 
