@@ -1,5 +1,6 @@
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 def printLine():
    print("\n--------------------------------------------------")
@@ -16,7 +17,7 @@ class MLP:
      layers = [inputs] + hidden_layers + [outputs]
 
      for i in range(len(layers)-1):
-        w = np.random.randn(layers[i+1], layers[i]) * np.sqrt(2./layers[i])    #np.sqrt(2./(layers[i]+layers[i+1]))
+        w = np.random.randn(layers[i+1], layers[i]) * np.sqrt(2./layers[i]) 
         b = np.zeros((layers[i+1], 1))
         
         self.W.append(w)
@@ -30,7 +31,7 @@ class MLP:
 #------------------------------------------------------------------------
   
   def sigmoid_derive(self, x):
-      return self.sigmoid(x) * (1 - self.sigmoid(x))
+      return x * (1 - x)
 #------------------------------------------------------------------
   
   def forward(self, x):
@@ -73,9 +74,10 @@ class MLP:
      for i in range(iterations):
        for j in range(len(X)):
           self.retropropagation(X[j],y[j])
+       if len(X) >10:
+          print("iteration ",i,"/",iterations,": done")
  
-   
-     
+    
 
 #-------------------------------------- MAIN -----------------------------------------
  
@@ -84,13 +86,13 @@ def main():
    # Charger les données from file
 
    data_file = "data.txt"
-   lines = 5
+   lines = 500
    data = np.loadtxt(data_file)[:lines]   
 
    X_data = data[:, :3]   
    y_data = data[:, 3].reshape(-1, 1)   
 
-   mlp =MLP(inputs=3,outputs=1, hidden_layers=[5,3], alpha=0.2)
+   mlp =MLP(inputs=3,outputs=1, hidden_layers=[10,7,5,3], alpha=0.01)
     
    print("\n testing the first ",lines," samples")
 
@@ -99,13 +101,16 @@ def main():
     print("Sample ",i,": DATA=", X_data[i],": True=", y_data[i]," output= ",output.flatten())
    
     
-   mlp.train(X_data,y_data,10000)
+   mlp.train(X_data,y_data,2000)
    
    print("output after retropropagation :")
+   p=[]
 
    for i in range(lines):   
       output, _ = mlp.forward(X_data[i])
       print("Sample ",i,": True=", y_data[i]," ","output= ",output.flatten())
+      p.append(output.flatten()[0])
+   
     
    #---- testing on XOR----------------------------------------------------------------------------------------------------------------------------
    printLine()
@@ -123,17 +128,37 @@ def main():
     print("Sample ",i,": True=", XOR_y[i][0]," output= ",XORoutput.flatten()[0])
 
    
-   mpl.train(XOR_X,XOR_y,20000)
+   mpl.train(XOR_X,XOR_y,2000)
        
    
    print("output after retropropagation :")
 
    for i in range(4):   
-      output, _ = mpl.forward(XOR_X[i])
-      print("Sample ",i,": True=", XOR_y[i][0]," ","output= ",output.flatten()[0])
+      outputXOR, _ = mpl.forward(XOR_X[i])
+      print("Sample ",i,": True=", XOR_y[i][0]," ","output= ",outputXOR.flatten()[0])
 
+   # visualisation of the vase
    
+   x = X_data[:, 0]
+   y = X_data[:, 1]
+   z = X_data[:, 2]
 
+   # Create 3D scatter plot
+   fig = plt.figure(figsize=(10, 8))
+   ax = fig.add_subplot(111, projection='3d')
+   for i in range(len(x)):
+       if p[i] >= 0.5:
+           ax.scatter(x[i],y[i], z[i], c='red', s=5)
+       else:
+           ax.scatter(x[i], y[i], z[i], c='gray', s=5)
+    
+   ax.set_xlabel('X')
+   ax.set_ylabel('Y')
+   ax.set_zlabel('Z')
+   ax.set_title('3D Vase visualisation')
+   plt.tight_layout()
+   plt.show() 
+   
 
 
 
