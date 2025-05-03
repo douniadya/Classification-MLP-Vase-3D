@@ -1,6 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 def printLine():
    print("\n--------------------------------------------------")
@@ -33,49 +34,47 @@ class MLP:
   def sigmoid_derive(self, x):
       return x * (1 - x)
 #------------------------------------------------------------------
-  
-  def forward(self, x):
-     a = x.reshape(-1, 1)
-     A = [a]
-
-     for l in range(len(self.W)):
-        a = self.forwardL(a,l)
-        A.append(a)
-
-     return a, A
-  
-  def forwardL(self, inA, l):
-     w = self.W[l]
-     b = self.B[l]
-
-     a = self.sigmoid(np.dot(w, inA)+b)
-
-     return a
+   
+  def forward(self, X):
+    A = [X.T]  
+    for l in range(len(self.W)):
+        Z = np.dot(self.W[l], A[-1]) + self.B[l]
+        A.append(self.sigmoid(Z))
+    return A[-1], A
   
   #-----------------------------------------
 
-  def retropropagation(self, x, yt):
-     out, A = self.forward(x) 
-     yt = yt.reshape(-1,1)
- 
-     D = [(out - yt) * self.sigmoid_derive(out)]
-     for l in reversed(range(len(self.W)-1)):
-        err = np.dot(self.W[l+1].T, D[-1])
-        D.append(err * self.sigmoid_derive(A[l+1]))
-     D.reverse()
+  def retropropagation(self, X, Y):
+    Y = Y.T   
+    out, A = self.forward(X)
 
-     for l in range(len(self.W)):
-        gradW=np.dot(D[l],A[l].T)
-        gradB =D[l]
+    D = [(out - Y) * self.sigmoid_derive(out)]
+    for l in reversed(range(len(self.W) - 1)):
+        err = np.dot(self.W[l + 1].T, D[-1])
+        D.append(err * self.sigmoid_derive(A[l + 1]))
+    D.reverse()
+
+    nem = X.shape[0]
+    for l in range(len(self.W)):
+        gradW = np.dot(D[l], A[l].T) / nem
+        gradB = np.sum(D[l], axis=1, keepdims=True) / nem
         self.W[l] -= self.alpha * gradW
         self.B[l] -= self.alpha * gradB
    
-  def train(self, X,y,iterations):
-     for i in range(iterations):
-       for j in range(len(X)):
-          self.retropropagation(X[j],y[j])
-       if len(X) >10:
-          print("iteration ",i,"/",iterations,": done")
+  def train(self, X, y, iterations):
+    for i in range(iterations):
+        self.retropropagation(X, y)
+        #if i % 100==0:
+         #   print("iteration", i, "/", iterations, ": done")
+   
+   
+  def accuracy(self, p,y):
+     pre = (p>=0.5).astype(int)
+     yn = y.astype(int).flatten()
+     eq = sum(pre==yn)
+     acc= (eq /len(y))*100
+     return round(float(acc), 2)
+
  
     
 
@@ -86,34 +85,93 @@ def main():
    # Charger les données from file
 
    data_file = "data.txt"
-   lines = 500
+   lines = 20000
    data = np.loadtxt(data_file)[:lines]   
 
    X_data = data[:, :3]   
    y_data = data[:, 3].reshape(-1, 1)   
 
-   mlp =MLP(inputs=3,outputs=1, hidden_layers=[10,7,5,3], alpha=0.01)
+   mlp =MLP(inputs=3,outputs=1, hidden_layers=[5,3], alpha=0.5)
     
-   print("\n testing the first ",lines," samples")
-
+   print("\n testing the ",lines," samples")
+   """
    for i in range(lines):   
     output, _ = mlp.forward(X_data[i])
     print("Sample ",i,": DATA=", X_data[i],": True=", y_data[i]," output= ",output.flatten())
-   
+   """
     
-   mlp.train(X_data,y_data,2000)
+   mlp.train(X_data,y_data,20000)
    
-   print("output after retropropagation :")
+   #print("output after retropropagation :")
    p=[]
+   new_p=[]
+   new_p= np.array(new_p)
+   p, _ = mlp.forward(X_data)
+   p = p.flatten()
 
+   """
    for i in range(lines):   
       output, _ = mlp.forward(X_data[i])
       print("Sample ",i,": True=", y_data[i]," ","output= ",output.flatten())
       p.append(output.flatten()[0])
+   """
+   p = np.array(p)
+   acc = mlp.accuracy(p,y_data)
+   acc_max = acc
+
+   for i in range(30):
+      print("iteration :",i+1)
+      mlp.train(X_data,y_data,20000)
+      p, _ = mlp.forward(X_data)
+      p = p.flatten()
+      acc_new = mlp.accuracy(p,y_data)
+
+      if acc_new >acc :
+         acc_max = acc_new
+         acc=acc_new
+         new_p = p
+         printLine()
+         print(f"MLP accuracy : {acc}")
+
+   printLine()
+   print(f"MLP accuracy (MAX): {acc_max}") 
    
+
+   # visualisation of the vase
+   
+   x = X_data[:, 0]
+   y = X_data[:, 1]
+   z = X_data[:, 2]
+
+   # Create 3D scatter plot
+   fig = plt.figure(figsize=(10, 8))
+   ax = fig.add_subplot(111, projection='3d')
+   
+   
+   ax.scatter(x[new_p>=0.5],y[new_p>=0.5], z[new_p>=0.5], c='red', s=5)
+   
+   #ax.scatter(x[new_p<0.5], y[new_p<0.5], z[new_p<0.5], c='gray', s=5)
+    
+   ax.set_xlabel('X')
+   ax.set_ylabel('Y')
+   ax.set_zlabel('Z')
+   ax.set_title('3D Vase visualisation')
+   plt.tight_layout()
+   plt.show() 
+   
+   predictions = (new_p >= 0.5).astype(int)
+
+   # Combine X_data and predicted labels
+   output_data = np.hstack((X_data, predictions.reshape(-1, 1)))
+
+   # Save in the same format as data.txt: x y z predicted_label
+   np.savetxt("test.txt", output_data, fmt="%.16f %.16f %.16f %d")
+
     
    #---- testing on XOR----------------------------------------------------------------------------------------------------------------------------
+   """
    printLine()
+   
    print("Learning on XOR:")
    mpl=MLP(inputs=2,outputs=1, hidden_layers=[5,3], alpha=0.6)
    XOR_X =np.array([[0,0],
@@ -136,32 +194,12 @@ def main():
    for i in range(4):   
       outputXOR, _ = mpl.forward(XOR_X[i])
       print("Sample ",i,": True=", XOR_y[i][0]," ","output= ",outputXOR.flatten()[0])
-
-   # visualisation of the vase
-   
-   x = X_data[:, 0]
-   y = X_data[:, 1]
-   z = X_data[:, 2]
-
-   # Create 3D scatter plot
-   fig = plt.figure(figsize=(10, 8))
-   ax = fig.add_subplot(111, projection='3d')
-   for i in range(len(x)):
-       if p[i] >= 0.5:
-           ax.scatter(x[i],y[i], z[i], c='red', s=5)
-       else:
-           ax.scatter(x[i], y[i], z[i], c='gray', s=5)
-    
-   ax.set_xlabel('X')
-   ax.set_ylabel('Y')
-   ax.set_zlabel('Z')
-   ax.set_title('3D Vase visualisation')
-   plt.tight_layout()
-   plt.show() 
-   
-
-
+   """
 
     
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"\nExecution time: {elapsed_time:.2f} seconds")
