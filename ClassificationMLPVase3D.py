@@ -75,8 +75,27 @@ class MLP:
      acc= (eq /len(y))*100
      return round(float(acc), 2)
 
- 
+  def plot_vase_best(self, X,Y):
+       # visualisation of the vase
+       
+   
+       x = X[:, 0]
+       y = X[:, 1]
+       z = X[:, 2]
+
+       # Create 3D scatter plot
+       fig_b = plt.figure(figsize=(10, 8))
+       ax_b = fig_b.add_subplot(111, projection='3d')
+   
+       Y= np.array(Y)       
+       ax_b.scatter(x[Y==1],y[Y==1], z[Y==1], c='red', s=5)
     
+       ax_b.set_xlabel('X')
+       ax_b.set_ylabel('Y')
+       ax_b.set_zlabel('Z')
+       ax_b.set_title('3D Vase visualisation _ 98.8')
+       plt.tight_layout()
+       plt.show() 
 
 #-------------------------------------- MAIN -----------------------------------------
  
@@ -100,7 +119,7 @@ def main():
     print("Sample ",i,": DATA=", X_data[i],": True=", y_data[i]," output= ",output.flatten())
    """
     
-   mlp.train(X_data,y_data,20000)
+   #mlp.train(X_data,y_data,20000)
    
    #print("output after retropropagation :")
    p=[]
@@ -118,8 +137,8 @@ def main():
    p = np.array(p)
    acc = mlp.accuracy(p,y_data)
    acc_max = acc
-
-   for i in range(30):
+   """
+   for i in range(7):
       print("iteration :",i+1)
       mlp.train(X_data,y_data,20000)
       p, _ = mlp.forward(X_data)
@@ -166,6 +185,16 @@ def main():
 
    # Save in the same format as data.txt: x y z predicted_label
    np.savetxt("test.txt", output_data, fmt="%.16f %.16f %.16f %d")
+   """
+
+   data_file_best = "test_tst.txt"
+   lines = 20000
+   data_b = np.loadtxt(data_file_best)[:lines]   
+
+   X_data_b = data_b[:, :3]   
+   y_data_b = data_b[:, 3]
+
+   mlp.plot_vase_best(X_data_b,y_data_b)   
 
     
    #---- testing on XOR----------------------------------------------------------------------------------------------------------------------------
