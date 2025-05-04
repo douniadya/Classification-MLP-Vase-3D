@@ -2,10 +2,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import pickle
 
 def printLine():
    print("\n--------------------------------------------------")
-
+"""
+@njit
+def sigmoid(x):     
+      return 1 / (1 + np.exp(-x))
+#------------------------------------------------------------------------
+@njit  
+def sigmoid_derive(x):
+      return x * (1 - x)
+#------------------------------------------------------------------
+"""  
 class MLP:
   def __init__(self, inputs, outputs, hidden_layers, alpha=0.01):
      self.inputs = inputs
@@ -24,17 +34,15 @@ class MLP:
         self.W.append(w)
         self.B.append(b)
 
-
-  
-#--------------------------------------------------------------------
-  def sigmoid(self, x):     
+  def sigmoid(self,x):     
       return 1 / (1 + np.exp(-x))
 #------------------------------------------------------------------------
   
-  def sigmoid_derive(self, x):
+  def sigmoid_derive(self,x):
       return x * (1 - x)
-#------------------------------------------------------------------
-   
+  
+#--------------------------------------------------------------------
+ 
   def forward(self, X):
     A = [X.T]  
     for l in range(len(self.W)):
@@ -62,10 +70,14 @@ class MLP:
         self.B[l] -= self.alpha * gradB
    
   def train(self, X, y, iterations):
-    for i in range(iterations):
-        self.retropropagation(X, y)
-        #if i % 100==0:
-         #   print("iteration", i, "/", iterations, ": done")
+    for j in range(iterations):
+        batch_size = 256
+        for i in range(0, X.shape[0], batch_size):
+          X_batch = X[i:i+batch_size]
+          y_batch = y[i:i+batch_size]
+          self.retropropagation(X_batch, y_batch)
+        if j % 1000==0:
+            print("iteration", j, "/", iterations, ": done")
    
    
   def accuracy(self, p,y):
@@ -74,34 +86,25 @@ class MLP:
      eq = sum(pre==yn)
      acc= (eq /len(y))*100
      return round(float(acc), 2)
+  
+  def save_weights(self, weight_file="weights.pkl", bias_file="biases.pkl"):
+      with open(weight_file, 'wb') as f:
+          pickle.dump(self.W, f)
+      with open(bias_file, 'wb') as f:
+          pickle.dump(self.B, f)
+      print("Weights and biases saved successfully.")
 
-  def plot_vase_best(self, X,Y):
-       # visualisation of the vase
-       
-   
-       x = X[:, 0]
-       y = X[:, 1]
-       z = X[:, 2]
-
-       # Create 3D scatter plot
-       fig_b = plt.figure(figsize=(10, 8))
-       ax_b = fig_b.add_subplot(111, projection='3d')
-   
-       Y= np.array(Y)       
-       ax_b.scatter(x[Y==1],y[Y==1], z[Y==1], c='red', s=5)
-    
-       ax_b.set_xlabel('X')
-       ax_b.set_ylabel('Y')
-       ax_b.set_zlabel('Z')
-       ax_b.set_title('3D Vase visualisation _ 98.8')
-       plt.tight_layout()
-       plt.show() 
+  def load_weights(self, weight_file="weights.pkl", bias_file="biases.pkl"):
+      with open(weight_file, 'rb') as f:
+          self.W = pickle.load(f)
+      with open(bias_file, 'rb') as f:
+          self.B = pickle.load(f)
+      print("Weights and biases loaded successfully.")
+ 
 
 #-------------------------------------- MAIN -----------------------------------------
  
 def main():
-
-   # Charger les données from file
 
    data_file = "data.txt"
    lines = 20000
@@ -110,121 +113,77 @@ def main():
    X_data = data[:, :3]   
    y_data = data[:, 3].reshape(-1, 1)   
 
-   mlp =MLP(inputs=3,outputs=1, hidden_layers=[5,3], alpha=0.5)
-    
-   print("\n testing the ",lines," samples")
-   """
-   for i in range(lines):   
-    output, _ = mlp.forward(X_data[i])
-    print("Sample ",i,": DATA=", X_data[i],": True=", y_data[i]," output= ",output.flatten())
-   """
-    
-   #mlp.train(X_data,y_data,20000)
+   mlp =MLP(inputs=3,outputs=1, hidden_layers=[10,36,12], alpha=0.5)
+   print("\nTesting the ",lines," samples")
    
-   #print("output after retropropagation :")
    p=[]
    new_p=[]
    new_p= np.array(new_p)
    p, _ = mlp.forward(X_data)
    p = p.flatten()
 
-   """
-   for i in range(lines):   
-      output, _ = mlp.forward(X_data[i])
-      print("Sample ",i,": True=", y_data[i]," ","output= ",output.flatten())
-      p.append(output.flatten()[0])
-   """
-   p = np.array(p)
    acc = mlp.accuracy(p,y_data)
    acc_max = acc
-   """
-   for i in range(7):
-      print("iteration :",i+1)
-      mlp.train(X_data,y_data,20000)
+   W = []
+   B = []
+
+   for i in range(2):
+      print("Iteration :",i+1)
+      mlp.train(X_data,y_data,8000)
       p, _ = mlp.forward(X_data)
       p = p.flatten()
       acc_new = mlp.accuracy(p,y_data)
 
-      if acc_new >acc :
+      if acc_new > acc:
          acc_max = acc_new
-         acc=acc_new
+         acc = acc_new
          new_p = p
+         W = mlp.W.copy()
+         B = mlp.B.copy()
          printLine()
          print(f"MLP accuracy : {acc}")
 
    printLine()
    print(f"MLP accuracy (MAX): {acc_max}") 
-   
 
-   # visualisation of the vase
-   
+   # Save the best weights and biases
+   mlp.W = W
+   mlp.B = B
+   mlp.save_weights("weights.pkl", "biases.pkl")
+
+   # Visualize the vase
    x = X_data[:, 0]
    y = X_data[:, 1]
    z = X_data[:, 2]
-
-   # Create 3D scatter plot
    fig = plt.figure(figsize=(10, 8))
    ax = fig.add_subplot(111, projection='3d')
-   
-   
-   ax.scatter(x[new_p>=0.5],y[new_p>=0.5], z[new_p>=0.5], c='red', s=5)
-   
-   #ax.scatter(x[new_p<0.5], y[new_p<0.5], z[new_p<0.5], c='gray', s=5)
-    
+   ax.scatter(x[new_p>=0.5], y[new_p>=0.5], z[new_p>=0.5], c='red', s=5)
    ax.set_xlabel('X')
    ax.set_ylabel('Y')
    ax.set_zlabel('Z')
    ax.set_title('3D Vase visualisation')
    plt.tight_layout()
    plt.show() 
-   
-   predictions = (new_p >= 0.5).astype(int)
-
-   # Combine X_data and predicted labels
-   output_data = np.hstack((X_data, predictions.reshape(-1, 1)))
-
-   # Save in the same format as data.txt: x y z predicted_label
-   np.savetxt("test.txt", output_data, fmt="%.16f %.16f %.16f %d")
-   """
-
-   data_file_best = "test_tst.txt"
-   lines = 20000
-   data_b = np.loadtxt(data_file_best)[:lines]   
-
-   X_data_b = data_b[:, :3]   
-   y_data_b = data_b[:, 3]
-
-   mlp.plot_vase_best(X_data_b,y_data_b)   
-
-    
-   #---- testing on XOR----------------------------------------------------------------------------------------------------------------------------
-   """
+   """   
+   # ------------ TESTING ON test.txt --------------------
    printLine()
-   
-   print("Learning on XOR:")
-   mpl=MLP(inputs=2,outputs=1, hidden_layers=[5,3], alpha=0.6)
-   XOR_X =np.array([[0,0],
-                    [0,1],
-                    [1,0],
-                    [1,1]])
-   
-   XOR_y=np.array([0,1,1,0]).reshape(-1,1)
+   print("Testing on test.txt (without labels)")
 
-   for i in range(4):   
-    XORoutput, _ = mpl.forward(XOR_X[i])
-    print("Sample ",i,": True=", XOR_y[i][0]," output= ",XORoutput.flatten()[0])
+   test_data_file = "test.txt"
+   output_file = "test_predicted.txt" # output file
+   test_data = np.loadtxt(test_data_file)  # test.txt has only x,y,z
 
-   
-   mpl.train(XOR_X,XOR_y,2000)
-       
-   
-   print("output after retropropagation :")
+   predictions, _ = mlp.forward(test_data)
+   predictions = (predictions >= 0.5).astype(int)  # binary output: 0 or 1
 
-   for i in range(4):   
-      outputXOR, _ = mpl.forward(XOR_X[i])
-      print("Sample ",i,": True=", XOR_y[i][0]," ","output= ",outputXOR.flatten()[0])
+   # Save the results with predicted labels
+   output_data = np.hstack((test_data, predictions.reshape(-1, 1)))
+   np.savetxt(output_file, output_data, fmt="%.5f", delimiter=" ")
+
+   print(f"Predicted labels saved to '{output_file}'")
    """
 
+   
     
 if __name__ == "__main__":
     start_time = time.time()
