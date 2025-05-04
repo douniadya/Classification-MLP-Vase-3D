@@ -5,3 +5,5 @@
 06/04 : Rétropropagation à corriger (tous les tests retournent 0.5 +- epsilon)
 
 20/04 : Done. Good Work
+
+04/05 : Impossible to test
